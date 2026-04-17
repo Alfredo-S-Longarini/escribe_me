@@ -1,0 +1,33 @@
+---
+import BaseLayout from './BaseLayout.astro'
+import ParticlesBackground from '../components/particles/ParticlesBackground'
+
+interface Props {
+  title?: string
+}
+
+const { title } = Astro.props
+---
+
+<BaseLayout title={title}>
+  <div class="relative min-h-screen flex items-center justify-center px-4" style="background:var(--bg)">
+    <ParticlesBackground client:load />
+
+    <div class="relative z-10 w-full max-w-md py-12">
+
+      <!-- Logo -->
+      <a
+        href="/"
+        class="block text-center mb-10 transition-opacity hover:opacity-70"
+        aria-label="Volver al inicio"
+      >
+        <span class="font-serif text-3xl text-warm-50 font-light tracking-tight">Escribe</span>
+        <span class="font-serif text-3xl text-warm-200 font-light">.</span>
+        <span class="font-serif text-3xl text-warm-200 font-light italic">me</span>
+      </a>
+
+      <slot />
+
+    </div>
+  </div>
+</BaseLayout>

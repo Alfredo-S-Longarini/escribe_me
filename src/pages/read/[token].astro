@@ -1,0 +1,175 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import { getBookByTokenServer } from '../../lib/shareLinks.server'
+import { TEMPLATES } from '../../lib/templates'
+import type { Book, Chapter } from '../../types'
+
+const { token } = Astro.params
+if (!token) return Astro.redirect('/')
+
+const { data, error } = await getBookByTokenServer(Astro.locals.supabase, token)
+if (error || !data) return Astro.redirect('/read/not-found')
+
+const book     = data as unknown as Book & { chapters: Chapter[] }
+const template = TEMPLATES[book.template]
+const chapters = [...(book.chapters ?? [])].sort((a, b) => a.order - b.order)
+---
+
+<BaseLayout title={`${book.title} — Escribe.me`}>
+  <div class="min-h-screen" style="background: var(--bg);">
+
+    <!-- Top bar -->
+    <header style="display:flex;align-items:center;justify-content:space-between;padding:1.25rem 2rem;border-bottom:1px solid var(--border);">
+      <a href="/" style={`font-family:'Cormorant Garamond',Georgia,serif;font-size:0.9rem;color:${template.accentColor};text-decoration:none;`}>
+        escribe<span style="font-style:italic;">.me</span>
+      </a>
+      <span id="progress-badge" style={`font-family:'DM Sans',system-ui,sans-serif;font-size:0.6rem;color:var(--text-faint);letter-spacing:0.15em;text-transform:uppercase;border:1px solid var(--border);padding:0.25rem 0.75rem;border-radius:4px;`}>
+        {template.label} · {chapters.length} {chapters.length === 1 ? 'parte' : 'partes'}
+      </span>
+    </header>
+
+    <!-- Chapters nav (multi-chapter) -->
+    {chapters.length > 1 && (
+      <nav id="chapters-nav" style="display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--border);padding:0 2rem;">
+        {chapters.map((c, i) => (
+          <button
+            class="chap-btn"
+            data-index={i}
+            onclick={`goToChapter(${i})`}
+            style={`font-family:'DM Sans',system-ui,sans-serif;font-size:0.65rem;color:var(--text-faint);letter-spacing:0.1em;background:none;border:none;border-bottom:2px solid transparent;padding:0.75rem 1rem;cursor:pointer;white-space:nowrap;transition:all 0.15s;`}
+          >
+            {c.title}
+          </button>
+        ))}
+      </nav>
+    )}
+
+    <!-- Reader -->
+    <main style="max-width:680px;margin:0 auto;padding:3rem 2rem;">
+
+      <!-- Title block (shown only on first chapter) -->
+      <div id="title-block">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1.5rem;">
+          <span style="font-family:'DM Sans',system-ui,sans-serif;font-size:0.6rem;color:var(--text-faint);letter-spacing:0.25em;text-transform:uppercase;">{template.label}</span>
+        </div>
+        <h1 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:clamp(2rem,6vw,3.5rem);font-weight:300;color:var(--text);margin:0 0 0.75rem;line-height:1.1;">
+          {book.title}
+        </h1>
+        <p style="font-family:'DM Sans',system-ui,sans-serif;font-size:0.7rem;color:var(--text-faint);margin:0 0 2.5rem;">
+          Compartido en Escribe.me
+        </p>
+        <hr style="border:none;border-top:1px solid var(--border);margin:0 0 2.5rem;" />
+      </div>
+
+      <!-- Chapter content -->
+      {chapters.map((chapter, i) => {
+        let content: any = null
+        try { content = JSON.parse(chapter.content) } catch {}
+
+        return (
+          <article class="chapter-article" data-index={i} style={i === 0 ? '' : 'display:none'}>
+            {chapters.length > 1 && (
+              <h2 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.5rem;font-weight:400;color:var(--text-muted);margin:0 0 2rem;">
+                {chapter.title}
+              </h2>
+            )}
+            <div class="reader-body" style="font-family:'Lora',Georgia,serif;font-size:1.05rem;color:var(--text-body);line-height:1.9;">
+              {content?.content?.map((node: any) => {
+                if (node.type === 'heading') {
+                  const text = node.content?.map((n: any) => n.text).join('') ?? ''
+                  return node.attrs?.level === 1
+                    ? <h2 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.5rem;font-weight:400;color:var(--text);margin:2rem 0 1rem;">{text}</h2>
+                    : <h3 style="font-family:'Cormorant Garamond',Georgia,serif;font-size:1.2rem;font-weight:400;color:var(--text-muted);margin:1.5rem 0 0.75rem;">{text}</h3>
+                }
+                if (node.type === 'paragraph') {
+                  const text = node.content?.map((n: any) => n.text ?? '').join('') ?? ''
+                  return text ? <p style="margin:0 0 1.25rem;">{text}</p> : <br />
+                }
+                return null
+              }) ?? <p style="color:var(--text-ghost);font-style:italic;">Sin contenido.</p>}
+            </div>
+          </article>
+        )
+      })}
+
+      <!-- Chapter navigation -->
+      {chapters.length > 1 && (
+        <nav style="display:flex;justify-content:space-between;align-items:center;padding:2rem 0;border-top:1px solid var(--border);margin-top:2rem;">
+          <button id="btn-prev" onclick="prevChapter()" style="font-family:'DM Sans',system-ui,sans-serif;font-size:0.65rem;color:var(--text-faint);letter-spacing:0.1em;text-transform:uppercase;background:none;border:none;cursor:pointer;opacity:0.4;">
+            ← Anterior
+          </button>
+          <span id="chapter-counter" style="font-family:'DM Sans',system-ui,sans-serif;font-size:0.6rem;color:var(--text-ghost);">
+            1 / {chapters.length}
+          </span>
+          <button id="btn-next" onclick="nextChapter()" style="font-family:'DM Sans',system-ui,sans-serif;font-size:0.65rem;color:var(--text-faint);letter-spacing:0.1em;text-transform:uppercase;background:none;border:none;cursor:pointer;">
+            Siguiente →
+          </button>
+        </nav>
+      )}
+
+      <!-- Footer -->
+      <footer style="border-top:1px solid var(--border);padding:2rem 0;margin-top:2rem;text-align:center;">
+        <p style="font-family:'DM Sans',system-ui,sans-serif;font-size:0.65rem;color:var(--text-ghost);letter-spacing:0.15em;text-transform:uppercase;margin:0 0 1rem;">
+          Escrito en Escribe.me
+        </p>
+        <a href="/auth/register"
+          style={`font-family:'DM Sans',system-ui,sans-serif;font-size:0.7rem;color:${template.accentColor};text-decoration:none;letter-spacing:0.1em;border-bottom:1px solid ${template.accentColor}40;padding-bottom:2px;`}>
+          Empezar a escribir gratis
+        </a>
+      </footer>
+    </main>
+  </div>
+</BaseLayout>
+
+<script define:vars={{ token, totalChapters: chapters.length }}>
+  const STORAGE_KEY = `em_read_${token}`
+  let currentIndex = 0
+
+  function saveProgress(idx) {
+    try { localStorage.setItem(STORAGE_KEY, String(idx)) } catch(e) {}
+  }
+
+  function loadProgress() {
+    try { return parseInt(localStorage.getItem(STORAGE_KEY) || '0', 10) || 0 } catch(e) { return 0 }
+  }
+
+  function goToChapter(idx) {
+    const articles = document.querySelectorAll('.chapter-article')
+    const btns     = document.querySelectorAll('.chap-btn')
+
+    articles.forEach((a, i) => { a.style.display = i === idx ? 'block' : 'none' })
+    btns.forEach((b, i) => {
+      b.style.color       = i === idx ? 'var(--accent)' : 'var(--text-faint)'
+      b.style.borderBottomColor = i === idx ? 'var(--accent)' : 'transparent'
+    })
+
+    // Show title block only on first chapter
+    const titleBlock = document.getElementById('title-block')
+    if (titleBlock) titleBlock.style.display = idx === 0 ? 'block' : 'none'
+
+    // Update counter and prev/next
+    const counter = document.getElementById('chapter-counter')
+    const prev    = document.getElementById('btn-prev')
+    const next    = document.getElementById('btn-next')
+    if (counter) counter.textContent = `${idx + 1} / ${totalChapters}`
+    if (prev) prev.style.opacity = idx === 0 ? '0.3' : '1'
+    if (next) next.style.opacity = idx === totalChapters - 1 ? '0.3' : '1'
+
+    // Update progress badge
+    const badge = document.getElementById('progress-badge')
+    if (badge) badge.textContent = `Cap. ${idx + 1} de ${totalChapters}`
+
+    currentIndex = idx
+    saveProgress(idx)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  function prevChapter() { if (currentIndex > 0) goToChapter(currentIndex - 1) }
+  function nextChapter()  { if (currentIndex < totalChapters - 1) goToChapter(currentIndex + 1) }
+
+  // Restore progress on load
+  document.addEventListener('DOMContentLoaded', () => {
+    const saved = loadProgress()
+    if (saved > 0 && saved < totalChapters) goToChapter(saved)
+  })
+</script>

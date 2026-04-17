@@ -1,0 +1,87 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import ParticlesBackground from '../components/particles/ParticlesBackground'
+
+const features = [
+  { label: 'Privado',     text: 'Solo tú decides qué se ve' },
+  { label: 'Sin juicios', text: 'Libre de métricas y presión' },
+  { label: 'Tuyo',        text: '7 formatos para tu voz' },
+]
+---
+
+<BaseLayout>
+  <!-- Particles behind everything -->
+  <ParticlesBackground client:load />
+
+  <!-- Navigation -->
+  <nav class="relative z-10 flex justify-between items-center px-8 py-6 lg:px-16">
+    <div class="font-serif font-light text-xl tracking-tight">
+      <span class="text-warm-50">Escribe</span>
+      <span class="text-warm-200">.</span>
+      <span class="text-warm-200 italic">me</span>
+    </div>
+    <a
+      href="/auth/login"
+      class="font-sans text-xs text-warm-400 tracking-widest uppercase border-b border-warm-600 pb-px hover:text-warm-200 hover:border-warm-200 transition-colors"
+    >
+      Iniciar sesión
+    </a>
+  </nav>
+
+  <!-- Hero -->
+  <main
+    class="relative z-10 flex flex-col items-center justify-center min-h-[calc(100svh-88px)] text-center px-8 -mt-4"
+    transition:animate="fade"
+  >
+    <p
+      class="font-sans text-warm-400 text-xs tracking-[0.35em] uppercase mb-10"
+      transition:animate="slide"
+    >
+      Tu espacio. Tu refugio.
+    </p>
+
+    <h1
+      class="font-serif font-light text-warm-50 leading-none tracking-tight"
+      style="font-size: clamp(3.25rem, 9vw, 6.5rem)"
+      transition:animate="slide"
+    >
+      Escribe<span class="text-warm-200">.</span><span class="text-warm-200 italic">me</span>
+    </h1>
+
+    <p
+      class="font-serif italic text-warm-300 mt-6 max-w-xs leading-relaxed text-base"
+      transition:animate="slide"
+    >
+      Para las palabras que no encuentran otro lugar donde ir.
+    </p>
+
+    <div class="flex items-center gap-6 mt-12 flex-wrap justify-center">
+      <a
+        href="/auth/register"
+        class="bg-warm-200 text-warm-950 px-10 py-3.5 font-sans text-xs font-medium tracking-widest uppercase hover:bg-warm-100 transition-colors"
+      >
+        Comenzar a escribir
+      </a>
+      <a
+        href="/auth/login"
+        class="font-sans text-xs text-warm-400 tracking-wide border-b border-warm-600 pb-px hover:text-warm-200 hover:border-warm-200 transition-colors"
+      >
+        Ya tengo cuenta
+      </a>
+    </div>
+  </main>
+
+  <!-- Features -->
+  <section class="relative z-10 max-w-2xl mx-auto px-8 pb-16">
+    <div class="border-t border-warm-700 grid grid-cols-3">
+      {features.map((f, i) => (
+        <div class={`text-center py-8 px-4 ${i < 2 ? 'border-r border-warm-700' : ''}`}>
+          <span class="block text-warm-200 text-sm mb-2">✦</span>
+          <p class="font-sans text-warm-300 text-xs tracking-widest uppercase mb-1">{f.label}</p>
+          <p class="font-serif italic text-warm-400 text-sm leading-relaxed">{f.text}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+</BaseLayout>

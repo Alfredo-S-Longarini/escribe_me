@@ -1,0 +1,142 @@
+---
+import BaseLayout from './BaseLayout.astro'
+import ParticlesBackground from '../components/particles/ParticlesBackground'
+import MobileNav from '../components/shared/MobileNav.astro'
+
+interface Props { title?: string }
+const { title } = Astro.props
+const user = Astro.locals.user
+---
+
+<BaseLayout title={title}>
+  <ParticlesBackground client:load />
+
+  <div class="app-shell">
+    <!-- Sidebar — solo visible en desktop -->
+    <aside class="sidebar">
+      <a href="/app" class="sidebar-logo">
+        <span class="logo-text">Escribe</span>
+        <span class="logo-dot">.</span>
+        <span class="logo-me">me</span>
+      </a>
+
+      <nav class="sidebar-nav">
+        <a href="/app"       class="sidebar-link">Biblioteca</a>
+        <a href="/app/nuevo" class="sidebar-link">Nuevo</a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="/app/perfil" class="sidebar-link sidebar-user">
+          {user?.user_metadata?.username ?? user?.email}
+        </a>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="app-main">
+      <slot />
+    </main>
+  </div>
+
+  <!-- Barra de navegación mobile -->
+  <MobileNav />
+</BaseLayout>
+
+<style>
+  .app-shell {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    min-height: 100vh;
+    background: var(--bg);
+  }
+
+  .sidebar {
+    width: 240px;
+    flex-shrink: 0;
+    display: none;
+    flex-direction: column;
+    padding: 1.5rem 1rem;
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+  }
+
+  @media (min-width: 768px) {
+    .sidebar { display: flex; }
+  }
+
+  .sidebar-logo {
+    display: block;
+    padding: 0.25rem 0.5rem;
+    margin-bottom: 2rem;
+    text-decoration: none;
+  }
+  .logo-text {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 300;
+    color: var(--text);
+  }
+  .logo-dot {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.25rem;
+    color: var(--accent);
+  }
+  .logo-me {
+    font-family: 'Cormorant Garamond', Georgia, serif;
+    font-size: 1.25rem;
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    flex: 1;
+  }
+
+  .sidebar-link {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.625rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-family: 'DM Sans', system-ui, sans-serif;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    transition: background 0.15s, color 0.15s;
+  }
+  .sidebar-link:hover {
+    background: var(--bg-paper);
+    color: var(--text);
+  }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding-top: 1rem;
+    margin-top: 1rem;
+  }
+  .sidebar-user {
+    font-size: 0.75rem;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--text-faint);
+  }
+
+  .app-main {
+    flex: 1;
+    overflow-y: auto;
+    background: var(--bg);
+    /* Espacio para la nav mobile */
+    padding-bottom: 0;
+  }
+
+  @media (max-width: 767px) {
+    .app-main {
+      padding-bottom: 70px;
+    }
+  }
+</style>

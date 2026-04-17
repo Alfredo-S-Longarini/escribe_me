@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro'
+import ParticlesBackground from '../components/particles/ParticlesBackground'
+---
+
+<BaseLayout title="Página no encontrada — Escribe.me">
+  <ParticlesBackground client:load />
+
+  <div class="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-8">
+    <p class="font-sans text-warm-400 text-xs tracking-[0.3em] uppercase mb-8">404</p>
+
+    <h1 class="font-serif font-light text-warm-50 text-5xl mb-4">
+      Esta página<br />se perdió entre las palabras.
+    </h1>
+
+    <p class="font-serif italic text-warm-300 text-base max-w-xs leading-relaxed mb-10">
+      Algunas historias terminan antes de tiempo. Esta no era la tuya.
+    </p>
+
+    <a
+      href="/"
+      class="font-sans text-xs text-warm-400 tracking-widest uppercase border-b border-warm-600 pb-px hover:text-warm-200 hover:border-warm-200 transition-colors"
+    >
+      Volver al inicio
+    </a>
+  </div>
+</BaseLayout>

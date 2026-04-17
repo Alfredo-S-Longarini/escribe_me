@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro'
+import ParticlesBackground from '../../components/particles/ParticlesBackground'
+---
+
+<BaseLayout title="Link no disponible — Escribe.me">
+  <ParticlesBackground client:load />
+
+  <div class="relative z-10 flex flex-col items-center justify-center min-h-screen text-center px-8">
+    <p class="font-sans text-warm-400 text-xs tracking-[0.3em] uppercase mb-8">Link no disponible</p>
+
+    <h1 class="font-serif font-light text-warm-50 text-4xl mb-4 leading-tight">
+      Este escrito ya no<br />está disponible.
+    </h1>
+
+    <p class="font-serif italic text-warm-400 text-base max-w-xs leading-relaxed mb-10">
+      La persona que lo escribió decidió que estas palabras son sólo suyas por ahora.
+    </p>
+
+    <a
+      href="/"
+      class="font-sans text-xs text-warm-400 tracking-widest uppercase border-b border-warm-600 pb-px hover:text-warm-200 hover:border-warm-200 transition-colors"
+    >
+      Ir a Escribe.me
+    </a>
+  </div>
+</BaseLayout>

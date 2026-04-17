@@ -1,0 +1,19 @@
+---
+import AppLayout from '../../layouts/AppLayout.astro'
+import TemplateSelector from '../../components/templates/TemplateSelector'
+---
+
+<AppLayout title="Nuevo escrito — Escribe.me">
+  <div class="px-8 py-8 lg:px-12 max-w-5xl">
+    <a
+      href="/app"
+      class="inline-flex items-center gap-2 font-sans text-xs tracking-widest uppercase mb-10 transition-colors"
+      style="color: var(--text-faint);"
+      onmouseover="this.style.color='var(--text-muted)'"
+      onmouseout="this.style.color='var(--text-faint)'"
+    >
+      ← Volver
+    </a>
+    <TemplateSelector client:load />
+  </div>
+</AppLayout>

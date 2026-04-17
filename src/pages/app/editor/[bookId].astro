@@ -1,0 +1,11 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro'
+import BookEditor from '../../../components/editor/BookEditor'
+
+const { bookId } = Astro.params
+if (!bookId) return Astro.redirect('/app')
+---
+
+<BaseLayout title="Editor — Escribe.me">
+  <BookEditor client:load bookId={bookId} />
+</BaseLayout>
