@@ -7,16 +7,25 @@ interface Props {
   template: TemplateKey
   wordCount: number
   currentFont: string
+  zoom: number
   onFontChange: (key: string) => void
+  onZoomChange: (zoom: number) => void
 }
 
 const SHOW_HEADINGS: TemplateKey[] = ['novel', 'story', 'essay']
 const SHOW_LISTS: TemplateKey[]    = ['novel', 'essay']
+const ZOOM_MIN = 70
+const ZOOM_MAX = 200
+const ZOOM_STEP = 10
 
-export default function Toolbar({ editor, template, wordCount, currentFont, onFontChange }: Props) {
+export default function Toolbar({ editor, template, wordCount, currentFont, zoom, onFontChange, onZoomChange }: Props) {
   if (!editor) return null
 
   const readingTime = Math.max(1, Math.round(wordCount / 200))
+
+  const zoomIn  = () => onZoomChange(Math.min(ZOOM_MAX, zoom + ZOOM_STEP))
+  const zoomOut = () => onZoomChange(Math.max(ZOOM_MIN, zoom - ZOOM_STEP))
+  const zoomReset = () => onZoomChange(100)
 
   return (
     <div style={{
@@ -50,6 +59,36 @@ export default function Toolbar({ editor, template, wordCount, currentFont, onFo
 
       <Sep />
       <FontPicker editor={editor} currentFont={currentFont} onDefaultChange={onFontChange} />
+
+      <Sep />
+
+      {/* Zoom controls */}
+      <ToolBtn active={false} onClick={zoomOut} title="Reducir zoom (Ctrl+-)">
+        <span style={{fontFamily:'system-ui',fontSize:'1rem',lineHeight:1}}>−</span>
+      </ToolBtn>
+      <button
+        onClick={zoomReset}
+        title="Restablecer zoom (Ctrl+0)"
+        style={{
+          background: zoom !== 100 ? 'var(--bg-paper)' : 'transparent',
+          border: 'none',
+          color: zoom !== 100 ? 'var(--accent)' : 'var(--text-ghost)',
+          cursor: 'pointer',
+          padding: '4px 6px',
+          borderRadius: '5px',
+          fontFamily: 'DM Sans, system-ui, sans-serif',
+          fontSize: '0.6rem',
+          letterSpacing: '0.03em',
+          minWidth: '38px',
+          textAlign: 'center',
+          transition: 'all 0.15s',
+        }}
+      >
+        {zoom}%
+      </button>
+      <ToolBtn active={false} onClick={zoomIn} title="Aumentar zoom (Ctrl++)">
+        <span style={{fontFamily:'system-ui',fontSize:'1rem',lineHeight:1}}>+</span>
+      </ToolBtn>
 
       <span style={{ fontFamily:'DM Sans,system-ui,sans-serif', fontSize:'0.6rem', color:'var(--text-ghost)', marginLeft:'auto', padding:'0 6px', letterSpacing:'0.05em', whiteSpace:'nowrap' }}>
         {wordCount.toLocaleString('es')} palabras · {readingTime} min

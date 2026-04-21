@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { Editor } from '@tiptap/react'
 import { supabase } from '../../lib/supabase'
@@ -18,22 +18,30 @@ const MULTI_CHAPTER: string[] = ['novel', 'story', 'essay']
 interface Props { bookId: string }
 
 export default function BookEditor({ bookId }: Props) {
-  const [book, setBook]                   = useState<Book | null>(null)
-  const [chapters, setChapters]           = useState<Chapter[]>([])
-  const [activeChapter, setActiveChapter] = useState<Chapter | null>(null)
-  const [saveStatus, setSaveStatus]       = useState<'saved' | 'saving' | 'unsaved'>('saved')
-  const [focusMode, setFocusMode]         = useState(false)
-  const [loading, setLoading]             = useState(true)
-  const [editingTitle, setEditingTitle]   = useState(false)
-  const [bookTitle, setBookTitle]         = useState('')
-  const [currentFont, setCurrentFont]     = useState('lora')
-  const [isMobile, setIsMobile]           = useState(false)
+  const [book, setBook]                     = useState<Book | null>(null)
+  const [chapters, setChapters]             = useState<Chapter[]>([])
+  const [activeChapter, setActiveChapter]   = useState<Chapter | null>(null)
+  const [saveStatus, setSaveStatus]         = useState<'saved' | 'saving' | 'unsaved'>('saved')
+  const [focusMode, setFocusMode]           = useState(false)
+  const [loading, setLoading]               = useState(true)
+  const [editingTitle, setEditingTitle]     = useState(false)
+  const [bookTitle, setBookTitle]           = useState('')
+  const [currentFont, setCurrentFont]       = useState('lora')
+  const [isMobile, setIsMobile]             = useState(false)
   const [editorInstance, setEditorInstance] = useState<Editor | null>(null)
+  const [zoom, setZoom]                     = useState(100)
 
-  const saveTimer     = useRef<ReturnType<typeof setTimeout>>()
-  const titleInputRef = useRef<HTMLInputElement>(null)
+  const saveTimer        = useRef<ReturnType<typeof setTimeout>>()
+  const titleInputRef    = useRef<HTMLInputElement>(null)
+  // Cache: stores latest content per chapter ID so switching back doesn't lose data
+  const contentCache     = useRef<Record<string, string>>({})
+  // Ref to always have current chapter in save callback (avoids stale closure)
+  const activeChapterRef = useRef<Chapter | null>(null)
 
-  // Detect mobile
+  useEffect(() => {
+    activeChapterRef.current = activeChapter
+  }, [activeChapter])
+
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768)
     check()
@@ -87,18 +95,50 @@ export default function BookEditor({ bookId }: Props) {
     setLoading(false)
   }
 
-  const handleContentChange = (content: string) => {
+  // Flush pending save immediately — called before switching chapters
+  const flushSave = useCallback(async (chapterId: string, content: string) => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current)
+      saveTimer.current = undefined
+    }
+    setSaveStatus('saving')
+    await updateChapterContent(chapterId, content)
+    await updateBook(bookId, {})
+    setSaveStatus('saved')
+  }, [bookId])
+
+  // Auto-save with debounce — uses ref to avoid stale chapter
+  const handleContentChange = useCallback((content: string) => {
+    const chapter = activeChapterRef.current
+    if (!chapter) return
+
+    // Always update cache immediately
+    contentCache.current[chapter.id] = content
     setSaveStatus('unsaved')
+
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(async () => {
+      const currentChapter = activeChapterRef.current
+      if (!currentChapter) return
       setSaveStatus('saving')
-      if (activeChapter) {
-        await updateChapterContent(activeChapter.id, content)
-        await updateBook(bookId, {})
-      }
+      await updateChapterContent(currentChapter.id, content)
+      await updateBook(bookId, {})
       setSaveStatus('saved')
     }, 1500)
-  }
+  }, [bookId])
+
+  // Switch chapter: flush pending save first, then switch
+  const handleSelectChapter = useCallback(async (chapter: Chapter) => {
+    const current = activeChapterRef.current
+    const cached  = current ? contentCache.current[current.id] : null
+
+    // If there's unsaved cached content, flush it before switching
+    if (current && cached && saveTimer.current) {
+      await flushSave(current.id, cached)
+    }
+
+    setActiveChapter(chapter)
+  }, [flushSave])
 
   const handleTitleSave = async () => {
     setEditingTitle(false)
@@ -124,13 +164,13 @@ export default function BookEditor({ bookId }: Props) {
 
   if (!book) return null
 
-  const template    = TEMPLATES[book.template]
+  const template     = TEMPLATES[book.template]
   const showChapters = MULTI_CHAPTER.includes(book.template) && !focusMode && !isMobile
 
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100vh', background:'var(--bg)', overflow:'hidden' }}>
 
-      {/* ── Desktop top bar ──────────────────────────── */}
+      {/* Desktop top bar */}
       {!isMobile && !focusMode && (
         <motion.div
           initial={{ opacity:0, y:-6 }}
@@ -143,9 +183,7 @@ export default function BookEditor({ bookId }: Props) {
           <Divider />
           <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
             {editingTitle ? (
-              <input
-                ref={titleInputRef}
-                value={bookTitle}
+              <input ref={titleInputRef} value={bookTitle}
                 onChange={e => setBookTitle(e.target.value)}
                 onBlur={handleTitleSave}
                 onKeyDown={e => { if (e.key==='Enter') handleTitleSave(); if (e.key==='Escape') { setEditingTitle(false); setBookTitle(book.title) } }}
@@ -177,12 +215,10 @@ export default function BookEditor({ bookId }: Props) {
         </motion.div>
       )}
 
-      {/* ── Mobile top bar ──────────────────────────── */}
+      {/* Mobile top bar */}
       {isMobile && !focusMode && (
         <div style={{ display:'flex', alignItems:'center', padding:'0 1rem', height:'46px', borderBottom:'1px solid var(--border)', gap:'0.75rem', flexShrink:0, background:'var(--bg)' }}>
-          <a href="/app" style={{ fontFamily:'DM Sans,system-ui,sans-serif', fontSize:'0.9rem', color:'var(--text-faint)', textDecoration:'none', flexShrink:0 }}>
-            ←
-          </a>
+          <a href="/app" style={{ fontFamily:'DM Sans,system-ui,sans-serif', fontSize:'0.9rem', color:'var(--text-faint)', textDecoration:'none', flexShrink:0 }}>←</a>
           <span style={{ flex:1, fontFamily:"'Cormorant Garamond',Georgia,serif", fontSize:'1rem', color:'var(--text)', textAlign:'center', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
             {bookTitle}
           </span>
@@ -190,7 +226,6 @@ export default function BookEditor({ bookId }: Props) {
         </div>
       )}
 
-      {/* Focus exit hint */}
       {focusMode && (
         <div style={{ position:'fixed', top:'1rem', right:'1.5rem', zIndex:100, fontFamily:'DM Sans,system-ui,sans-serif', fontSize:'0.6rem', color:'var(--text-ghost)', letterSpacing:'0.1em', cursor:'pointer' }}
           onClick={() => setFocusMode(false)}>
@@ -198,7 +233,7 @@ export default function BookEditor({ bookId }: Props) {
         </div>
       )}
 
-      {/* ── Main ────────────────────────────────────── */}
+      {/* Main */}
       <div style={{ display:'flex', flex:1, overflow:'hidden' }}>
         {showChapters && (
           <ChapterList
@@ -206,42 +241,47 @@ export default function BookEditor({ bookId }: Props) {
             chapters={chapters}
             activeChapter={activeChapter}
             accentColor={template.accentColor}
-            onSelect={setActiveChapter}
+            onSelect={handleSelectChapter}
             onChaptersChange={setChapters}
           />
         )}
         <EditorArea
           key={activeChapter?.id ?? 'empty'}
           chapter={activeChapter}
+          cachedContent={activeChapter ? contentCache.current[activeChapter.id] : undefined}
           template={book.template}
           focusMode={focusMode}
           accentColor={template.accentColor}
           currentFont={currentFont}
           isMobile={isMobile}
+          zoom={zoom}
+          onZoomChange={setZoom}
           onFontChange={handleFontChange}
           onChange={handleContentChange}
           onEditorReady={setEditorInstance}
         />
       </div>
 
-      {/* ── Mobile bottom bar ───────────────────────── */}
+      {/* Mobile bottom bar */}
       {isMobile && !focusMode && (
         <MobileEditorBar
           editor={editorInstance}
           template={book.template}
           bookId={bookId}
+          bookTitle={bookTitle}
           chapters={chapters}
           activeChapter={activeChapter}
           currentFont={currentFont}
           accentColor={template.accentColor}
           wordCount={editorInstance?.storage.characterCount?.words() ?? 0}
           showChapters={MULTI_CHAPTER.includes(book.template)}
-          onSelectChapter={setActiveChapter}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          onSelectChapter={handleSelectChapter}
           onChaptersChange={setChapters}
           onFontChange={handleFontChange}
           onShare={() => {}}
           onFocus={() => setFocusMode(true)}
-          bookTitle={bookTitle}
         />
       )}
     </div>

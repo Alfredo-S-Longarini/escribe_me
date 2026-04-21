@@ -17,6 +17,8 @@ interface Props {
   accentColor: string
   wordCount: number
   showChapters: boolean
+  zoom: number
+  onZoomChange: (z: number) => void
   onSelectChapter: (c: Chapter) => void
   onChaptersChange: (cs: Chapter[]) => void
   onFontChange: (key: string) => void
@@ -31,7 +33,7 @@ const SHOW_LISTS: TemplateKey[]    = ['novel', 'essay']
 export default function MobileEditorBar({
   editor, template, bookId, bookTitle, chapters, activeChapter,
   currentFont, accentColor, wordCount, showChapters,
-  onSelectChapter, onChaptersChange, onFontChange, onFocus,
+  zoom, onZoomChange, onSelectChapter, onChaptersChange, onFontChange, onFocus,
 }: Props) {
   const [panel, setPanel]       = useState<null | 'toolbar' | 'chapters'>(null)
   const [shareOpen, setShareOpen] = useState(false)
